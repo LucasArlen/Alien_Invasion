@@ -4,7 +4,10 @@ class Settings:
         self.screen_width = 1100
         self.screen_height = 700
         self.bg_color = (66, 81, 170)
+
+        # Configurações da espaçonave
         self.ship_speed_factor = 1.5
+        self.ship_limit = 3
 
         # Configurações do Projétil
         self.bullet_speed_factor = 3
@@ -14,8 +17,8 @@ class Settings:
         self.bullets_allowed = 3
 
         # Configurações dos alienígenas
-        self.alien_speed_factor = 0.2
-        self.fleet_drop_speed = 5
+        self.alien_speed_factor = 0.3
+        self.fleet_drop_speed = 10
 
         # fleet_direction igual a 1 representa direita; -1 representa a esquerda
         self.fleet_direction = 1
