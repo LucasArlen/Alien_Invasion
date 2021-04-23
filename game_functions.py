@@ -43,14 +43,24 @@ def check_events(ai_settings, screen, stats, play_button, ship, aliens, bullets)
 
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mouse_x, mouse_y = pygame.mouse.get_pos()
-            check_play_button(ai_settings, screen, stats, play_button, ship, aliens, bullets, mouse_x, mouse_y)
+            check_play_button(ai_settings, screen, stats, play_button,
+                              ship, aliens, bullets, mouse_x, mouse_y)
 
 
 def check_play_button(ai_settings, screen, stats, play_button, ship, aliens, bullets, mouse_x, mouse_y):
     """Inicia um novo jogo quando o jogador clicar em Play"""
-    if play_button.rect.collidepoint(mouse_x, mouse_y):
+    button_clicked = play_button.rect.collidepoint(mouse_x, mouse_y)
+
+    # Elimina a resposta de clique em play quando ele não está na tela
+    if button_clicked and not stats.game_active:
         stats.reset_stats()
         stats.game_active = True
+
+        # Inicializa as configurações iniciais do jogo
+        ai_settings.initialize_dynamic_settings()
+
+        # Oculta o cursor do mouse
+        pygame.mouse.set_visible(False)
 
         aliens.empty()
         bullets.empty()
@@ -59,7 +69,7 @@ def check_play_button(ai_settings, screen, stats, play_button, ship, aliens, bul
         ship.center_ship()
 
 
-def update_screen(ai_settings, screen, stats, ship, aliens, bullets, play_button):
+def update_screen(ai_settings, screen, stats, sb, ship, aliens, bullets, play_button):
     # Preenche a tela com a cor escolhida
     screen.fill(ai_settings.bg_color)
 
@@ -69,24 +79,34 @@ def update_screen(ai_settings, screen, stats, ship, aliens, bullets, play_button
     ship.blitme()
     aliens.draw(screen)
 
+    # Desenha a informação sobre a pontuação
+    sb.show_score()
+
     if not stats.game_active:
         play_button.draw_button()
 
     pygame.display.flip()
 
 
-def check_bullet_alien_collisions(ai_settings, screen, ship, aliens, bullets):
+def check_bullet_alien_collisions(ai_settings, screen, stats, sb, ship, aliens, bullets):
     # Verifica se algum projétil atingiu os alienígenas
     # Em caso afirmativo livra-se do projétil e do alienígena
     collisions = pygame.sprite.groupcollide(bullets, aliens, True, True)
 
+    if collisions:
+        for aliens in collisions.values():
+            stats.score += ai_settings.alien_points * len(aliens)
+            sb.prep_score()
+        check_high_score(stats, sb)
+
     if len(aliens) == 0:
         # Destrói os projéteis existentes e cria uma nova frota
         bullets.empty()
+        ai_settings.increase_speed()
         create_fleet(ai_settings, screen, ship, aliens)
 
 
-def update_bullets(ai_settings, screen, ship, aliens, bullets):
+def update_bullets(ai_settings, screen, stats, sb, ship, aliens, bullets):
     # Atualiza as posições dos projéteis
     bullets.update()
 
@@ -94,7 +114,7 @@ def update_bullets(ai_settings, screen, ship, aliens, bullets):
     for bullet in bullets.copy():
         if bullet.rect.bottom <= 0:
             bullets.remove(bullet)
-        check_bullet_alien_collisions(ai_settings, screen, ship, aliens, bullets)
+        check_bullet_alien_collisions(ai_settings, screen, stats, sb, ship, aliens, bullets)
 
 
 def check_fleet_edges(ai_settings, aliens):
@@ -128,6 +148,7 @@ def ship_hit(ai_settings, stats, screen, ship, aliens, bullets):
         sleep(0.5)
     else:
         stats.game_active = False
+        pygame.mouse.set_visible(True)
 
 
 def check_aliens_bottom(ai_settings, stats, screen, ship, aliens, bullets):
@@ -155,7 +176,8 @@ def update_aliens(ai_settings, stats, screen, ship, aliens, bullets):
 
 def get_number_rows(ai_settings, ship_height, alien_height):
     """Determina o número de linhas com alienígenas que cabem na tela"""
-    available_space_y = (ai_settings.screen_height - (4 * alien_height) - ship_height)
+    available_space_y = (ai_settings.screen_height -
+                         (4 * alien_height) - ship_height)
     number_rows = int(available_space_y / (2.5 * alien_height))
     return number_rows
 
@@ -183,10 +205,18 @@ def create_fleet(ai_settings, screen, ship, aliens):
 
     alien = Alien(ai_settings, screen)
     number_aliens_x = get_number_aliens_x(ai_settings, alien.rect.width)
-    number_rows = get_number_rows(ai_settings, ship.rect.height, alien.rect.height)
+    number_rows = get_number_rows(
+        ai_settings, ship.rect.height, alien.rect.height)
 
     # Cria a primeira linha de alienígenas
     for row_number in range(number_rows):
         for alien_number in range(number_aliens_x):
             # Cria um alienígena e posiciona na linha chamando create_alien()
             create_alien(ai_settings, screen, aliens, alien_number, row_number)
+
+
+def check_high_score(stats, sb):
+    """Verifica se há uma nova pontuação máxima"""
+    if stats.score > stats.high_score:
+        stats.high_score = stats.score
+        sb.prep_high_score()

@@ -7,6 +7,10 @@ class GameStats:
 
         self.game_active = True
 
+        # A pontuação máxima jamais deverá ser reiniciada
+        self.high_score = 0
+
     def reset_stats(self):
         """Inicializa os dados estatísticos que podem mudar durante o jogo."""
         self.ships_left = self.ai_settings.ship_limit
+        self.score = 0
